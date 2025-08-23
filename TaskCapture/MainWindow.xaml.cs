@@ -15,7 +15,9 @@ namespace TaskCapture
     public partial class MainWindow : Window
     {
         const int WM_HOTKEY = 0x0312;
-        const uint MOD_CONTROL = 0x0002, MOD_ALT = 0x0001;
+        const uint MOD_CONTROL = 0x0002;
+        const uint MOD_ALT = 0x0001;
+        const uint MOD_NOREPEAT = 0x4000;
         const int HWND_HOTKEY_ID = 42; // hwnd
         const int SCRL_HOTKEY_ID = 43; // scrol
 
@@ -90,8 +92,8 @@ namespace TaskCapture
             base.OnSourceInitialized(e);
             _src = (HwndSource)PresentationSource.FromVisual(this)!;
             _src.AddHook(WndProc);
-            Native.RegisterHotKey(_src.Handle, HWND_HOTKEY_ID, MOD_CONTROL | MOD_ALT, (uint)KeyInterop.VirtualKeyFromKey(Key.H)); // Ctrl+Alt+H
-            Native.RegisterHotKey(_src.Handle, SCRL_HOTKEY_ID, MOD_CONTROL | MOD_ALT, (uint)KeyInterop.VirtualKeyFromKey(Key.G)); // Ctrl+Alt+G
+            Native.RegisterHotKey(_src.Handle, HWND_HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)KeyInterop.VirtualKeyFromKey(Key.H)); // Ctrl+Alt+H
+            Native.RegisterHotKey(_src.Handle, SCRL_HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)KeyInterop.VirtualKeyFromKey(Key.G)); // Ctrl+Alt+G
         }
 
         protected override void OnClosed(EventArgs e)
@@ -115,11 +117,37 @@ namespace TaskCapture
             }
             else if (msg == WM_HOTKEY && wParam.ToInt32() == SCRL_HOTKEY_ID)
             {
-                _ = CaptureAsync(); // не блокируем обработчик
+                _ = Task.Run(async () =>
+                {
+                    await EnsureModifiersReleasedAsync();
+                    await Dispatcher.InvokeAsync(async () => await CaptureAsync());
+                });
                 handled = true;
             }
 
             return IntPtr.Zero;
+        }
+
+        private static async Task EnsureModifiersReleasedAsync(int timeoutMs = 500)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                bool ctrl = (Native.GetAsyncKeyState(Native.VK_CONTROL) & 0x8000) != 0
+                         || (Native.GetAsyncKeyState(Native.VK_LCONTROL) & 0x8000) != 0
+                         || (Native.GetAsyncKeyState(Native.VK_RCONTROL) & 0x8000) != 0;
+                bool alt = (Native.GetAsyncKeyState(Native.VK_MENU) & 0x8000) != 0
+                         || (Native.GetAsyncKeyState(Native.VK_LMENU) & 0x8000) != 0
+                         || (Native.GetAsyncKeyState(Native.VK_RMENU) & 0x8000) != 0;
+
+                if (!ctrl && !alt) return;
+                await Task.Delay(25);
+            }
+            // timeout — принудительно отпустим
+            Native.KeyUp((ushort)Native.VK_LCONTROL);
+            Native.KeyUp((ushort)Native.VK_RCONTROL);
+            Native.KeyUp((ushort)Native.VK_LMENU);
+            Native.KeyUp((ushort)Native.VK_RMENU);
         }
     }
 }

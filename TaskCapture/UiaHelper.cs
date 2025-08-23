@@ -76,6 +76,9 @@ namespace TaskCapture
             int cx = regionOnScreen.Left + regionOnScreen.Width / 2;
             int cy = regionOnScreen.Top + Math.Max(40, regionOnScreen.Height / 10);
 
+            int ticks = 0, maxTicks = 300;
+            Bitmap? prev = null;
+
             while (true)
             {
                 bool moved = false;
@@ -96,22 +99,45 @@ namespace TaskCapture
 
                 if (!moved && stagnant >= 2)
                 {
-                    // === ФОЛЛБЭК: колесо над панелью, не меняя фокуса на наше окно ===
-                    Native.GetCursorPos(out var old);
-                    Native.SetCursorPos(cx, cy);
-                    for (int i = 0; i < 6; i++) { Native.SendMouseWheel(-120); await Task.Delay(18); }
-                    Native.SetCursorPos(old.X, old.Y);
+                    // колесо без модификаторов, прямо в окно под точкой (cx,cy)
+                    for (int i = 0; i < 6; i++)
+                    {
+                        Native.PostMouseWheelToPoint(cx, cy, -120);
+                        await Task.Delay(18);
+                    }
                     await Task.Delay(settleMs);
                     stagnant = 0;
                 }
 
-                res.Frames.Add(Utils.CaptureRegion(regionOnScreen));
+                var frame = Utils.CaptureRegion(regionOnScreen);
+                res.Frames.Add(frame);
+
+                if (++ticks >= maxTicks) break;
+
+                if (prev != null && AreAlmostSame(prev, frame))
+                    break;
+                prev?.Dispose();
+                prev = (Bitmap)frame.Clone();
 
                 // стоп по «не меняется картинка» или лимиту итераций (подстраховка)
                 if (res.Frames.Count > 300) break;
             }
 
             return res;
+        }
+
+        // простая проверка сходства кадров (быстрая): сравнить 100 сэмплов пикселей
+        static bool AreAlmostSame(Bitmap a, Bitmap b)
+        {
+            if (a.Width != b.Width || a.Height != b.Height) return false;
+            int same = 0, total = 120;
+            var rnd = new Random(1);
+            for (int i = 0; i < total; i++)
+            {
+                int x = rnd.Next(0, a.Width), y = rnd.Next(0, a.Height);
+                if (a.GetPixel(x, y) == b.GetPixel(x, y)) same++;
+            }
+            return same > total * 0.98; // 98% одинаковых — считаем застой
         }
 
         private static void TryScrollToTop(ScrollPattern sp)

@@ -57,5 +57,56 @@ namespace TaskCapture
             }
             catch { return new Rectangle(pt.X, pt.Y, w, h); }
         }
+
+        [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);
+
+        public const int VK_CONTROL = 0x11, VK_MENU = 0x12;
+        public const int VK_LCONTROL = 0xA2, VK_RCONTROL = 0xA3;
+        public const int VK_LMENU = 0xA4, VK_RMENU = 0xA5;
+
+        const uint INPUT_KEYBOARD = 1;
+        const uint KEYEVENTF_KEYUP = 0x0002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct INPUT_KBD { public uint type; public KEYBDINPUT ki; }
+        [StructLayout(LayoutKind.Sequential)]
+        struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
+        [DllImport("user32.dll")] static extern uint SendInput(uint nInputs, INPUT_KBD[] pInputs, int cbSize);
+
+        public static void KeyUp(ushort vk)
+        {
+            var up = new INPUT_KBD { type = INPUT_KEYBOARD, ki = new KEYBDINPUT { wVk = vk, dwFlags = KEYEVENTF_KEYUP } };
+            SendInput(1, new[] { up }, Marshal.SizeOf<INPUT_KBD>());
+        }
+
+        //[DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT pt);
+        [DllImport("user32.dll")] public static extern IntPtr ChildWindowFromPointEx(IntPtr hwndParent, POINT pt, uint uFlags);
+        [DllImport("user32.dll")] static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+        [DllImport("user32.dll")] static extern bool PostMessage(IntPtr hWnd, uint Msg, UIntPtr wParam, IntPtr lParam);
+
+        public const uint WM_MOUSEWHEEL = 0x020A;
+        public const uint CWP_SKIPINVISIBLE = 0x0001;
+        public const uint CWP_SKIPDISABLED = 0x0002;
+        public const uint CWP_SKIPTRANSPARENT = 0x0004;
+
+        public static void PostMouseWheelToPoint(int xScreen, int yScreen, int delta)
+        {
+            var pt = new POINT { X = xScreen, Y = yScreen };
+            IntPtr hwnd = WindowFromPoint(pt);
+            if (hwnd == IntPtr.Zero) return;
+
+            // углубимся до дочернего под указанной точкой
+            var clientPt = pt;
+            ScreenToClient(hwnd, ref clientPt);
+            var child = ChildWindowFromPointEx(hwnd, clientPt, CWP_SKIPDISABLED | CWP_SKIPINVISIBLE | CWP_SKIPTRANSPARENT);
+            if (child != IntPtr.Zero) hwnd = child;
+
+            // wParam: LOWORD=0 (нет MK_CONTROL), HIWORD=wheel delta
+            uint wParam = (uint)((ushort)delta) << 16; // delta = +/-120 * N
+                                                       // lParam: screen coords (x,y) packed: low = x, high = y
+            int lParam = (yScreen << 16) | (xScreen & 0xFFFF);
+
+            PostMessage(hwnd, WM_MOUSEWHEEL, (UIntPtr)wParam, (IntPtr)lParam);
+        }
     }
 }
