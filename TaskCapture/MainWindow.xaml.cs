@@ -53,7 +53,7 @@ namespace TaskCapture
 
             // По умолчанию покажем, что задания нет
             UpdateTaskLabel();
-            LogLine("Готово. В браузере: Ctrl+Alt+H → затем крутить и жать Ctrl+Alt+G для кадров. Ctrl+Alt+E — отправить. Ctrl+Alt+Z — новое задание.");
+            LogLine("Готово. В браузере: Ctrl+Alt+H - окно → Ctrl+Alt+Z — задание → Ctrl+Alt+G - кадр. Ctrl+Alt+E — отправить.");
         }
 
         protected override void OnClosed(EventArgs e)

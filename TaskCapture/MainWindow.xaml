@@ -23,7 +23,8 @@
                     Margin="0,0,0,6"
                     FontWeight="Bold"
                     Text="Горячие клавиши" />
-                <TextBlock Text="Ctrl+Alt+H — выбрать активное окно (браузер)" />
+                <TextBlock Text="Ctrl+Alt+H — Выбрать активное окно (браузер)" />
+                <TextBlock Text="Ctrl+Alt+Z — Создать новое задание (папку captures), закрыть окно результата" />
                 <TextBlock Text="Ctrl+Alt+G — Снять кадр (левая+правая панели), без скролла" />
                 <TextBlock Text="Ctrl+Alt+E — Отправить все кадры в ChatGPT и показать ответ" />
             </StackPanel>
