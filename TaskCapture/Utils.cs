@@ -10,16 +10,16 @@ namespace TaskCapture
             var lw = (int)Math.Round(r.Width * (leftPct / total));
             var left = new Rectangle(r.Left, r.Top, lw, r.Height);
             var right = new Rectangle(r.Left + lw, r.Top, r.Width - lw, r.Height);
-            left.Inflate(-8, -8); right.Inflate(-8, -8); // не задевать сплиттер
+            left.Inflate(-8, -8); right.Inflate(-8, -8);
             return (left, right);
         }
+
         public static System.Drawing.Point CenterOf(Rectangle r) => new(r.Left + r.Width / 2, r.Top + r.Height / 2);
 
-
-        public static System.Drawing.Bitmap CaptureRegion(Rectangle r)
+        public static Bitmap CaptureRegion(Rectangle r)
         {
-            var bmp = new System.Drawing.Bitmap(r.Width, r.Height);
-            using var g = System.Drawing.Graphics.FromImage(bmp);
+            var bmp = new Bitmap(r.Width, r.Height);
+            using var g = Graphics.FromImage(bmp);
             g.CopyFromScreen(r.Location, System.Drawing.Point.Empty, r.Size);
             return bmp;
         }

@@ -2,53 +2,61 @@
     x:Class="TaskCapture.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="clr-namespace:TaskCapture"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="TaskCapture"
-    Width="580"
-    Height="420"
-    mc:Ignorable="d">
-  <Grid Margin="12">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
+    Width="680"
+    Height="460">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-    <!-- Панель 1: две кнопки -->
-    <StackPanel Orientation="Horizontal">
-      <!-- имитируем Spacing=8 -->
-      <StackPanel.Resources>
-        <Style TargetType="FrameworkElement">
-          <Setter Property="Margin" Value="0,0,8,0"/>
-        </Style>
-      </StackPanel.Resources>
+        <!--  Панель хоткеев  -->
+        <Border
+            Padding="10"
+            BorderBrush="#ddd"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel>
+                <TextBlock
+                    Margin="0,0,0,6"
+                    FontWeight="Bold"
+                    Text="Горячие клавиши" />
+                <TextBlock Text="Ctrl+Alt+H — выбрать активное окно (браузер)" />
+                <TextBlock Text="Ctrl+Alt+G — Снять кадр (левая+правая панели), без скролла" />
+                <TextBlock Text="Ctrl+Alt+E — Отправить все кадры в ChatGPT и показать ответ" />
+            </StackPanel>
+        </Border>
 
-      <Button x:Name="BtnPickActive" Content="Использовать активное окно"
-              Width="220" Click="BtnPickActive_Click"/>
-      <Button x:Name="BtnPickCursor" Content="Выбрать под курсором (3с)"
-              Width="220" Click="BtnPickCursor_Click"/>
-    </StackPanel>
+        <!--  Строка статуса  -->
+        <StackPanel
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            Orientation="Horizontal">
+            <StackPanel.Resources>
+                <Style TargetType="FrameworkElement">
+                    <Setter Property="Margin" Value="0,0,12,0" />
+                </Style>
+            </StackPanel.Resources>
 
-    <!-- Панель 2: поля и кнопка запуска -->
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0">
-      <!-- имитируем Spacing=12 -->
-      <StackPanel.Resources>
-        <Style TargetType="FrameworkElement">
-          <Setter Property="Margin" Value="0,0,12,0"/>
-        </Style>
-      </StackPanel.Resources>
+            <TextBlock VerticalAlignment="Center" Text="HWND:" />
+            <TextBlock
+                x:Name="LblHwnd"
+                VerticalAlignment="Center"
+                FontWeight="Bold" />
+            <Button Click="BtnOpenFolder_Click" Content="Открыть папку captures" />
+            <Button Click="BtnClearFolder_Click" Content="Очистить captures" />
+            <Button Click="BtnSnap_Click" Content="Снять кадр (G)" />
+            <Button Click="BtnSend_Click" Content="Отправить (E)" />
+        </StackPanel>
 
-      <TextBlock Text="HWND:" VerticalAlignment="Center"/>
-      <TextBlock x:Name="LblHwnd" FontWeight="Bold" VerticalAlignment="Center"/>
-      <TextBlock Text=" | Панели (доли):" VerticalAlignment="Center"/>
-      <TextBox x:Name="TbLeft" Width="60" Text="0.5"/>
-      <TextBox x:Name="TbRight" Width="60" Text="0.5"/>
-      <Button x:Name="BtnRun" Content="Снять и прокрутить" Width="180" Click="BtnRun_Click"/>
-    </StackPanel>
-
-    <TextBox Grid.Row="2" x:Name="Log" Margin="0,12,0,0"
-             AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
-  </Grid>
+        <!--  Лог  -->
+        <TextBox
+            x:Name="Log"
+            Grid.Row="2"
+            Margin="0,12,0,0"
+            AcceptsReturn="True"
+            VerticalScrollBarVisibility="Auto" />
+    </Grid>
 </Window>

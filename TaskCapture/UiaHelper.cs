@@ -102,7 +102,7 @@ namespace TaskCapture
                     // колесо без модификаторов, прямо в окно под точкой (cx,cy)
                     for (int i = 0; i < 6; i++)
                     {
-                        Native.PostMouseWheelToPoint(cx, cy, -120);
+                        //Native.PostMouseWheelToPoint(cx, cy, -120);
                         await Task.Delay(18);
                     }
                     await Task.Delay(settleMs);
