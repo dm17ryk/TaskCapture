@@ -11,17 +11,19 @@ namespace TaskCapture
         private static readonly HttpClient _http = new HttpClient();
 
         /// <summary>
-        /// Отправляет список изображений (в порядке: left_0000, right_0000, left_0001, right_0001, …)
-        /// и получает HTML-ответ с решением. Ключ читается из переменной окружения OPENAI_API_KEY.
+        /// Отправляет список изображений (в порядке: L/R/L/R/... c фильтрацией на уровне вызывающего кода)
+        /// и получает ПОЛНЫЙ HTML (с обёрткой и подсветкой) для показа в WebView2.
         /// </summary>
-        public static async Task<string> SolveFromImagesAsync(List<string> imagePaths, Action<string>? log = null)
+        public static async Task<string> SolveFromImagesAsync(
+            List<string> imagePaths,
+            string modelId,
+            double? temperature,
+            Action<string>? log = null)
         {
             var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("Не задан OPENAI_API_KEY в переменных окружения.");
+                throw new InvalidOperationException("Не задан OPENAI_API_KEY.");
 
-            // Сформируем messages для Chat Completions Vision (gpt-4o-mini / gpt-4o)
-            // Отдадим инструкции: вернуть чистый HTML с подсветкой через highlight.js.
             var sys = new
             {
                 role = "system",
@@ -33,11 +35,10 @@ namespace TaskCapture
             {
                 type = "text",
                 text =
-                "You will receive screenshots from a coding platform (left: instructions, right: code template). " +
-                "Read them in order and produce the final answer. " +
-                "Return pure HTML inside <article>...</article> only. " +
-                "If there is a code file to fill, output the complete file in a single fenced block (<pre><code class=\"language-...\">). " +
-                "Do not include Markdown."
+                    "You will receive screenshots from a coding platform (left: instructions, right: code template). " +
+                    "Images are in reading order. The right image may repeat if it didn't change. " +
+                    "Produce the final answer. Return pure HTML inside <article>...</article> only. " +
+                    "If there is a code file to fill, output the complete file in one <pre><code class=\"language-...\"> block. Do not include Markdown."
             });
 
             foreach (var path in imagePaths)
@@ -52,35 +53,57 @@ namespace TaskCapture
 
             var user = new { role = "user", content = userParts };
 
-            var payload = new
+            // Готовим payload
+            var payload = new Dictionary<string, object?>
             {
-                model = "gpt-5-nano", // поддерживает vision
-                messages = new object[] { sys, user },
-                //temperature = 0.2
+                ["model"] = modelId,
+                ["messages"] = new object[] { sys, user }
             };
+            if (temperature.HasValue) payload["temperature"] = temperature;
+
+            var org = Environment.GetEnvironmentVariable("OPENAI_ORG");
+            var project = Environment.GetEnvironmentVariable("OPENAI_PROJECT");
 
             using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            if (!string.IsNullOrWhiteSpace(org)) req.Headers.Add("OpenAI-Organization", org);
+            if (!string.IsNullOrWhiteSpace(project)) req.Headers.Add("OpenAI-Project", project);
             req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
             var res = await _http.SendAsync(req);
             var body = await res.Content.ReadAsStringAsync();
             if (!res.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException($"OpenAI error {res.StatusCode}: {body}");
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    var err = doc.RootElement.GetProperty("error");
+                    var code = err.TryGetProperty("code", out var ce) ? ce.GetString() : null;
+                    var msg = err.TryGetProperty("message", out var me) ? me.GetString() : body;
+
+                    if (code == "insufficient_quota")
+                        throw new InvalidOperationException(
+                            "Недостаточно квоты в OpenAI (insufficient_quota). Проверь оплату/кредиты и организацию/проект.");
+
+                    if ((int)res.StatusCode == 429)
+                        throw new InvalidOperationException("Лимит запросов (429) или квота. Попробуй позже/пополни кредиты.");
+
+                    throw new InvalidOperationException($"OpenAI API error {res.StatusCode}: {msg}");
+                }
+                catch (JsonException)
+                {
+                    throw new InvalidOperationException($"OpenAI API error {res.StatusCode}: {body}");
+                }
             }
 
-            using var doc = JsonDocument.Parse(body);
-            var html = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
-
-            // Вставим обёртку с highlight.js, чтобы подсветка кодовых блоков работала
-            var fullHtml = HtmlWrapper(html);
+            using var docOk = JsonDocument.Parse(body);
+            var content = docOk.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+            var fullHtml = WrapHtml(content);
             return fullHtml;
         }
 
-        private static string HtmlWrapper(string innerHtml)
+        public static string WrapHtml(string innerHtml)
         {
-            // Автоподсветка через highlight.js с CDN
             return $@"
 <!doctype html>
 <html lang=""en"">
