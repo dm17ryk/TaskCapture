@@ -40,6 +40,11 @@
                 </Style>
             </StackPanel.Resources>
 
+            <TextBlock VerticalAlignment="Center" Text="Task:" />
+            <TextBlock
+                x:Name="LblTaskFolder"
+                VerticalAlignment="Center"
+                FontWeight="Bold" />
             <TextBlock VerticalAlignment="Center" Text="HWND:" />
             <TextBlock
                 x:Name="LblHwnd"
@@ -48,6 +53,11 @@
             <Button Click="BtnOpenFolder_Click" Content="Открыть папку captures" />
             <Button Click="BtnClearFolder_Click" Content="Очистить captures" />
             <Button Click="BtnSnap_Click" Content="Снять кадр (G)" />
+            <ComboBox x:Name="ModelComboBox" SelectedIndex="2">
+                <ComboBoxItem Content="GPT-5" Tag="gpt-5" />
+                <ComboBoxItem Content="GPT-5 mini" Tag="gpt-5-mini" />
+                <ComboBoxItem Content="GPT-5 nano" Tag="gpt-5-nano" />
+            </ComboBox>
             <Button Click="BtnSend_Click" Content="Отправить (E)" />
         </StackPanel>
 
