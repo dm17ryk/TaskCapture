@@ -86,4 +86,4 @@ See the [LICENSE](./LICENSE) file for details.
 
 ---
 
-🚀 *Happy experimenting with TaskSolver!*  
+🚀 *Happy experimenting with TaskSolver! (Tested on coderpad.io)*  
